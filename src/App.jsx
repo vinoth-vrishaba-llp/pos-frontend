@@ -7,7 +7,6 @@ import { getAccessToken } from "./utils/authStorage";
 import { fetchCustomers } from "./api/customers.api";
 import { fetchCategories } from "./api/categories.api";
 import { createOrder, fetchOrderById } from "./api/orders.api";
-
 import { defaultMeasurements } from "./data/mockData";
 
 import Login from "./pages/Login";
