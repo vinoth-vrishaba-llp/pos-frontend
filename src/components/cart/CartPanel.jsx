@@ -1,0 +1,97 @@
+// src/components/cart/CartPanel.jsx
+import CartItems from "./CartItems";
+import CustomerSection from "./CustomerSection";
+import VoucherAndNotes from "./VoucherAndNotes";
+import TotalsFooter from "./TotalsFooter";
+import OrderMetaControls from "./OrderMetaControls";
+
+export default function CartPanel({
+  cart,
+  subtotal,
+  discountValue,
+  setDiscountValue,
+  discountType,
+  setDiscountType,
+  discountAmount,
+  chargesTotal,
+  total,
+  currentCustomer,
+  onOpenCustomerModal,
+  onRemoveItem,
+  onChangeQty,
+  notes,
+  setNotes,
+  measurements,
+  setMeasurements,
+  couponCode,
+  setCouponCode,
+  alterationCharge,
+  setAlterationCharge,
+  courierCharge,
+  setCourierCharge,
+  otherCharge,
+  setOtherCharge,
+  orderType,
+  setOrderType,
+  paymentMethod,
+  onPrintReceipt,
+  onMarkPaid,
+  resetSaleToNew,
+}) {
+  return (
+    <>
+      <CustomerSection
+        currentCustomer={currentCustomer}
+        onOpenCustomerModal={onOpenCustomerModal}
+      />
+
+      {/* Cart items + Extras Scrollable Area */}
+      <div className="flex-1 overflow-y-auto p-4 no-scrollbar" id="cart-container">
+        <CartItems
+          cart={cart}
+          onRemoveItem={onRemoveItem}
+          onChangeQty={onChangeQty}
+        />
+
+        {/* Voucher + Notes/Measurements */}
+        <VoucherAndNotes
+          notes={notes}
+          setNotes={setNotes}
+          measurements={measurements}
+          setMeasurements={setMeasurements}
+          couponCode={couponCode}
+          setCouponCode={setCouponCode}
+        />
+
+        {/* Order type + extra charges + discount */}
+        <OrderMetaControls
+          alterationCharge={alterationCharge}
+          setAlterationCharge={setAlterationCharge}
+          courierCharge={courierCharge}
+          setCourierCharge={setCourierCharge}
+          otherCharge={otherCharge}
+          setOtherCharge={setOtherCharge}
+          orderType={orderType}
+          setOrderType={setOrderType}
+          discountValue={discountValue}
+          setDiscountValue={setDiscountValue}
+          discountType={discountType}
+          setDiscountType={setDiscountType}
+        />
+      </div>
+
+      {/* Totals + actions */}
+      <TotalsFooter
+        subtotal={subtotal}
+        discount={discountAmount}
+        chargesTotal={chargesTotal}
+        total={total}
+        paymentMethod={paymentMethod}
+        onPrint={onPrintReceipt}
+        onMarkPaid={onMarkPaid}
+        onResetSale={resetSaleToNew}
+        cartLength={cart.length}
+      />
+    </>
+  );
+}
