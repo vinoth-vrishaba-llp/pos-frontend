@@ -26,6 +26,20 @@ export default function OrderListPage({ onSelectOrder, onReprint }) {
   }, []);
 
   /* -------------------------
+     FORMAT DATE: DD/MM/YYYY HH:MM
+  -------------------------- */
+  function formatDateTime(dateString) {
+    const date = new Date(dateString);
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    
+    return `${day}/${month}/${year} ${hours}:${minutes}`;
+  }
+
+  /* -------------------------
      LOAD MORE ORDERS
   -------------------------- */
   async function loadMore() {
@@ -202,7 +216,7 @@ export default function OrderListPage({ onSelectOrder, onReprint }) {
                       <td className="px-3 py-2">
                         <div className="font-medium">{o.order_number}</div>
                         <div className="text-xs text-gray-400">
-                          {new Date(o.created_at).toLocaleString()}
+                          {formatDateTime(o.created_at)}
                         </div>
                       </td>
 

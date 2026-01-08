@@ -23,6 +23,20 @@ export default function OrderDetailsModal({ wooOrderId, onClose, onStatusUpdated
     };
   }, [wooOrderId]);
 
+  /* -------------------------
+     FORMAT DATE: DD/MM/YYYY HH:MM
+  -------------------------- */
+  function formatDateTime(dateString) {
+    const date = new Date(dateString);
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    
+    return `${day}/${month}/${year} ${hours}:${minutes}`;
+  }
+
   if (!order) return null;
 
   const status = (typeof order.status === "object" && order.status !== null)
@@ -64,9 +78,15 @@ export default function OrderDetailsModal({ wooOrderId, onClose, onStatusUpdated
       <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg mx-4 max-h-[90vh] flex flex-col">
         {/* HEADER */}
         <div className="flex justify-between items-center p-4 border-b">
-          <div>
-            <div className="font-semibold text-sm">Order #{order.order_number}</div>
-            <div className="text-[11px] text-gray-500 capitalize">{status}</div>
+          <div className="flex items-center gap-2">
+            <div>
+              <div className="font-semibold text-sm">Order #{order.order_number}</div>
+              <div className="text-[11px] text-gray-500 capitalize">{status}</div>
+            </div>
+            {/* Date Badge */}
+            <span className="px-2 py-1 bg-gray-100 text-gray-700 rounded-full text-[10px] font-medium">
+              {formatDateTime(order.created_at)}
+            </span>
           </div>
           <button onClick={onClose}><X className="w-4 h-4 text-gray-500" /></button>
         </div>
