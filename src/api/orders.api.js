@@ -27,6 +27,13 @@ export function searchOrders(query) {
 export const markOrderCompleted = (wooOrderId) =>
   api.patch(`/orders/${wooOrderId}/complete`);
 
+/**
+ * ✅ NEW: Refund order
+ * Updates order status to "refunded" in both WooCommerce and Baserow
+ */
+export const refundOrder = (wooOrderId) =>
+  api.patch(`/orders/${wooOrderId}/refund`);
+
 export const fetchOrderById = (wooOrderId) =>
   api.get(`/orders/${wooOrderId}`);
 

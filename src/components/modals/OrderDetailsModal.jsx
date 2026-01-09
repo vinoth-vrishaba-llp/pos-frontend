@@ -1,12 +1,15 @@
-import { useEffect, useState } from "react";
-import { X } from "lucide-react";
+import { useEffect, useState, useRef } from "react";
+import { X, MoreVertical } from "lucide-react";
 import Barcode from "react-barcode";
-import { fetchOrderById, markOrderCompleted } from "@/api/orders.api";
+import { fetchOrderById, markOrderCompleted, refundOrder } from "@/api/orders.api";
 import { toast } from "sonner";
 
 export default function OrderDetailsModal({ wooOrderId, onClose, onStatusUpdated, onReprint }) {
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [showOptionsMenu, setShowOptionsMenu] = useState(false);
+  const [showRefundConfirm, setShowRefundConfirm] = useState(false);
+  const menuRef = useRef(null);
 
   useEffect(() => {
     if (!wooOrderId) return;
@@ -22,6 +25,20 @@ export default function OrderDetailsModal({ wooOrderId, onClose, onStatusUpdated
       mounted = false;
     };
   }, [wooOrderId]);
+
+  // Close menu when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (menuRef.current && !menuRef.current.contains(event.target)) {
+        setShowOptionsMenu(false);
+      }
+    }
+
+    if (showOptionsMenu) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () => document.removeEventListener("mousedown", handleClickOutside);
+    }
+  }, [showOptionsMenu]);
 
   /* -------------------------
      FORMAT DATE: DD/MM/YYYY HH:MM
@@ -48,17 +65,35 @@ export default function OrderDetailsModal({ wooOrderId, onClose, onStatusUpdated
 
     setLoading(true);
     try {
-      // mark complete on server
       await markOrderCompleted(wooOrderId);
       toast.success("Order marked as completed");
 
-      // ALWAYS re-fetch normalized order from server so frontend state matches server normalization
       const fresh = await fetchOrderById(wooOrderId);
       setOrder(fresh.data);
       onStatusUpdated?.(fresh.data);
     } catch (err) {
       console.error("Mark completed error:", err);
       toast.error("Failed to update order");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleRefund() {
+    setLoading(true);
+    setShowRefundConfirm(false);
+    setShowOptionsMenu(false);
+    
+    try {
+      await refundOrder(wooOrderId);
+      toast.success("Order refunded successfully");
+
+      const fresh = await fetchOrderById(wooOrderId);
+      setOrder(fresh.data);
+      onStatusUpdated?.(fresh.data);
+    } catch (err) {
+      console.error("Refund error:", err);
+      toast.error(err.response?.data?.message || "Failed to refund order");
     } finally {
       setLoading(false);
     }
@@ -72,6 +107,8 @@ export default function OrderDetailsModal({ wooOrderId, onClose, onStatusUpdated
   } = order.totals || {};
 
   const charges = order.charges || {};
+
+  const canRefund = status !== "refund" && status !== "cancelled";
 
   return (
     <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/50">
@@ -201,24 +238,89 @@ export default function OrderDetailsModal({ wooOrderId, onClose, onStatusUpdated
         </div>
 
         {/* FOOTER */}
-        <div className="border-t p-4 flex gap-3 justify-end">
+        <div className="border-t p-4 flex gap-3 justify-end items-center">
+          {/* Options Menu (Refund) */}
+          <div className="relative mr-auto" ref={menuRef}>
+            <button
+              onClick={() => setShowOptionsMenu(!showOptionsMenu)}
+              className="p-2 rounded hover:bg-gray-100 transition-colors"
+              title="More options"
+            >
+              <MoreVertical className="w-5 h-5 text-gray-600" />
+            </button>
+
+            {showOptionsMenu && (
+              <div className="absolute bottom-full left-0 mb-2 bg-white rounded-lg shadow-lg border border-gray-200 py-1 min-w-[160px] z-10">
+                <button
+                  onClick={() => {
+                    if (canRefund) {
+                      setShowRefundConfirm(true);
+                      setShowOptionsMenu(false);
+                    }
+                  }}
+                  disabled={!canRefund || loading}
+                  className={`w-full text-left px-4 py-2 text-sm transition-colors ${
+                    canRefund && !loading
+                      ? "hover:bg-red-50 text-red-600"
+                      : "text-gray-400 cursor-not-allowed"
+                  }`}
+                >
+                  {status === "refund" ? "Already Refunded" : "Refund Order"}
+                </button>
+              </div>
+            )}
+          </div>
+
           {onReprint && (
             <button
               onClick={() => onReprint(wooOrderId)}
-              className="px-4 py-2 rounded font-medium border border-gray-300 hover:bg-gray-50"
+              className="px-4 py-2 rounded font-medium border border-gray-300 hover:bg-gray-50 transition-colors"
             >
               Reprint
             </button>
           )}
+          
           <button
             disabled={status === "completed" || loading}
             onClick={handleMarkCompleted}
-            className={`px-4 py-2 rounded font-medium ${status === "completed" ? "bg-gray-300 cursor-not-allowed" : "bg-black text-white"}`}
+            className={`px-4 py-2 rounded font-medium transition-colors ${
+              status === "completed" 
+                ? "bg-gray-300 cursor-not-allowed" 
+                : "bg-black text-white hover:bg-gray-800"
+            }`}
           >
             {status === "completed" ? "Completed" : (loading ? "Updating..." : "Mark as Completed")}
           </button>
         </div>
       </div>
+
+      {/* REFUND CONFIRMATION MODAL */}
+      {showRefundConfirm && (
+        <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/60">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md mx-4 p-6">
+            <h3 className="text-lg font-semibold mb-3 text-red-600">Confirm Refund</h3>
+            <p className="text-sm text-gray-700 mb-6">
+              Are you sure you want to refund order <strong>#{order.order_number}</strong>? 
+              This action will update the order status to "Refunded" in both POS and WooCommerce.
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setShowRefundConfirm(false)}
+                className="px-4 py-2 rounded font-medium border border-gray-300 hover:bg-gray-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleRefund}
+                disabled={loading}
+                className="px-4 py-2 rounded font-medium bg-red-600 text-white hover:bg-red-700 transition-colors disabled:bg-gray-300"
+              >
+                {loading ? "Processing..." : "Confirm Refund"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
