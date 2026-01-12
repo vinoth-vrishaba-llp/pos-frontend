@@ -15,19 +15,27 @@ export default function CartItems({ cart, onRemoveItem, onChangeQty }) {
   return (
     <div className="space-y-3">
       {cart.map((item, idx) => {
-        let maxQty = null;
+        // ✅ Calculate max quantity at PRODUCT level (not variation level)
+        // For fabric orders, stock is shared across ALL sizes
+        const productStock = item.product.stock_quantity != null 
+          ? item.product.stock_quantity 
+          : null;
+        
+        // Calculate total already in cart for this product (all sizes combined)
+        const totalInCart = cart
+          .filter(ci => ci.product.id === item.product.id)
+          .reduce((sum, ci) => sum + ci.qty, 0);
 
-        // ✅ CORRECT: variation-based stock control
-        if (item.variation?.stock_quantity != null) {
-          maxQty = item.variation.stock_quantity;
-        }
+        // Max quantity is the product stock (not variation stock)
+        const maxQty = productStock;
 
         return (
           <CartItem
-            key={`${item.product.id}-${item.variation?.id || "default"}`}
+            key={`${item.product.id}-${item.variation?.id || "default"}-${idx}`}
             item={item}
             index={idx}
             maxQty={maxQty}
+            totalInCart={totalInCart}
             onRemove={onRemoveItem}
             onChangeQty={onChangeQty}
           />

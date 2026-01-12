@@ -25,6 +25,9 @@ export default function CartPanel({
   setMeasurements,
   couponCode,
   setCouponCode,
+  appliedCoupon, // ✅ NEW: Applied coupon data
+  onApplyCoupon, // ✅ NEW: Coupon apply handler
+  isFetchingCoupon, // ✅ NEW: Loading state
   alterationCharge,
   setAlterationCharge,
   courierCharge,
@@ -61,6 +64,10 @@ export default function CartPanel({
           setMeasurements={setMeasurements}
           couponCode={couponCode}
           setCouponCode={setCouponCode}
+          appliedCoupon={appliedCoupon} // ✅ PASS COUPON DATA
+          onApplyCoupon={onApplyCoupon} // ✅ PASS APPLY HANDLER
+          isFetchingCoupon={isFetchingCoupon} // ✅ PASS LOADING STATE
+          subtotal={subtotal} // ✅ PASS SUBTOTAL FOR VALIDATION
         />
 
         {/* Order type + extra charges + discount */}
@@ -77,6 +84,8 @@ export default function CartPanel({
           setDiscountValue={setDiscountValue}
           discountType={discountType}
           setDiscountType={setDiscountType}
+          appliedCoupon={appliedCoupon} // ✅ PASS COUPON FOR DISPLAY
+          discountAmount={discountAmount} // ✅ PASS CALCULATED DISCOUNT
         />
       </div>
 

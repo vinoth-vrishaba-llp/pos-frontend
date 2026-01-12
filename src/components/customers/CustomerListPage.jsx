@@ -142,52 +142,63 @@ export default function CustomerListPage({ customers: propsCustomers = [] }) {
     });
   };
 
-  async function handleUpdateCustomer(customerId, updatedData) {
+ async function handleUpdateCustomer(customerId, updatedData) {
   const [firstName, ...lastNameParts] = updatedData.name.split(" ");
   
-  await updateCustomer(customerId, {
-    first_name: firstName,
-    last_name: lastNameParts.join(" "),
-    email: updatedData.email,
-    phone: updatedData.phone,
-    billing: { 
-      address_1: updatedData.address_1,
-      address_2: updatedData.address_2,
-      city: updatedData.city,
-      state: updatedData.state,
-      postcode: updatedData.postcode,
-      country: updatedData.country,
-    },
-    meta_data: [
-      {
-        key: "customer_type",
-        value: updatedData.customer_type
-      }
-    ]
-  });
+  // ✅ NEW: Validate at least one contact method
+  if (!updatedData.phone?.trim() && !updatedData.email?.trim()) {
+    alert("At least one contact method (phone or email) is required!");
+    return;
+  }
+  
+  try {
+    await updateCustomer(customerId, {
+      first_name: firstName,
+      last_name: lastNameParts.join(" "),
+      email: updatedData.email,
+      phone: updatedData.phone,
+      billing: { 
+        address_1: updatedData.address_1,
+        address_2: updatedData.address_2,
+        city: updatedData.city,
+        state: updatedData.state,
+        postcode: updatedData.postcode,
+        country: updatedData.country,
+      },
+      meta_data: [
+        {
+          key: "customer_type",
+          value: updatedData.customer_type
+        }
+      ]
+    });
 
-  setCustomers((prev) =>
-    prev.map((c) =>
-      (c.woo_customer_id || c.id) === customerId
-        ? {
-            ...c,
-            first_name: firstName,
-            last_name: lastNameParts.join(" "),
-            email: updatedData.email,
-            phone: updatedData.phone,
-            address_1: updatedData.address_1,
-            address_2: updatedData.address_2,
-            city: updatedData.city,
-            state: updatedData.state,
-            postcode: updatedData.postcode,
-            country: updatedData.country,
-            customer_type: updatedData.customer_type,
-          }
-        : c
-    )
-  );
+    setCustomers((prev) =>
+      prev.map((c) =>
+        (c.woo_customer_id || c.id) === customerId
+          ? {
+              ...c,
+              first_name: firstName,
+              last_name: lastNameParts.join(" "),
+              email: updatedData.email,
+              phone: updatedData.phone,
+              address_1: updatedData.address_1,
+              address_2: updatedData.address_2,
+              city: updatedData.city,
+              state: updatedData.state,
+              postcode: updatedData.postcode,
+              country: updatedData.country,
+              customer_type: updatedData.customer_type,
+            }
+          : c
+      )
+    );
 
-  setSelectedCustomer(null);
+    setSelectedCustomer(null);
+  } catch (error) {
+    console.error("Failed to update customer:", error);
+    alert(error.response?.data?.message || "Failed to update customer");
+  }
 }
 
   return (

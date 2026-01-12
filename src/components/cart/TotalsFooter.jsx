@@ -63,15 +63,14 @@ export default function TotalsFooter({
         </button>
       </div>
 
-      {/* Start New Sale – full-width, below actions */}
-      {cartLength > 0 && (
-        <button
-          onClick={onResetSale}
-          className="w-full bg-gray-200 hover:bg-gray-300 text-gray-900 py-2.5 rounded-lg font-semibold transition text-sm"
-        >
-          Start New Sale
-        </button>
-      )}
+       {/* Start New Sale – full-width, below actions */}
+      <button
+        onClick={onResetSale}
+        disabled={cartLength === 0}
+        className="w-full bg-gray-200 hover:bg-gray-300 text-gray-900 py-2.5 rounded-lg font-semibold transition text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        Start New Sale
+      </button>
     </div>
   );
 }

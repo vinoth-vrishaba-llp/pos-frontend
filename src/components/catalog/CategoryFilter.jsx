@@ -17,10 +17,34 @@ export default function CategoryFilter({
       </div>
     );
   }
-
   return (
     <div className="relative">
-      <div className="flex gap-2 overflow-x-auto py-2 no-scrollbar">
+      <style>{`
+        .category-scrollbar::-webkit-scrollbar {
+          height: 8px;
+        }
+        .category-scrollbar::-webkit-scrollbar-track {
+          background: #e5e7eb;
+          border-radius: 4px;
+        }
+        .category-scrollbar::-webkit-scrollbar-thumb {
+          background: #9ca3af;
+          border-radius: 4px;
+        }
+        .category-scrollbar::-webkit-scrollbar-thumb:hover {
+          background: #6b7280;
+        }
+      `}</style>
+      <div 
+        className="category-scrollbar flex gap-2 overflow-x-auto py-2 pb-3" 
+        style={{ 
+          scrollbarWidth: 'thin',
+          scrollbarColor: '#9ca3af #e5e7eb'
+        }}
+        onWheel={(e) => {
+          e.currentTarget.scrollLeft += e.deltaY;
+        }}
+      >
         {categories.map((c) => {
           const isActive = selectedCategory?.id === c.id;
 

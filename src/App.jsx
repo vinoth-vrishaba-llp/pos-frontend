@@ -8,6 +8,9 @@ import { fetchCustomers } from "./api/customers.api";
 import { fetchCategories } from "./api/categories.api";
 import { createOrder, fetchOrderById } from "./api/orders.api";
 import { defaultMeasurements } from "./data/mockData";
+import { fetchCouponById } from "./api/coupons.api";
+import { useTokenRefresh } from "./hooks/useTokenRefresh";
+import { useVariationsCache } from "./hooks/useVariationsCache";
 
 import Login from "./pages/Login";
 import MainLayout from "./components/layout/MainLayout";
@@ -36,12 +39,29 @@ function ProtectedRoute({ children }) {
 }
 
 /* =======================
-   UTIL
+   UTIL - PRODUCT-LEVEL STOCK FOR FABRIC ORDERS
 ======================= */
-function getAvailableStock(product, size) {
-  if (product.type !== "ready_to_wear") return Infinity;
-  const entry = product.sizes?.find((s) => s.size === size);
-  return entry?.stock ?? Infinity;
+// For fabric orders: stock is at PRODUCT level (shared across all sizes)
+function getProductTotalStock(product) {
+  // Check if product has product-level stock
+  if (product.stock_quantity != null) {
+    return product.stock_quantity;
+  }
+  return Infinity;
+}
+
+// Calculate total quantity of a product in cart (across ALL sizes/variations)
+function getProductCartQuantity(cart, productId) {
+  return cart
+    .filter(item => item.product.id === productId)
+    .reduce((sum, item) => sum + item.qty, 0);
+}
+
+// Calculate remaining stock for entire product
+function getRemainingProductStock(cart, product) {
+  const totalStock = getProductTotalStock(product);
+  const inCart = getProductCartQuantity(cart, product.id);
+  return Math.max(0, totalStock - inCart);
 }
 
 /* =======================
@@ -51,6 +71,9 @@ export default function App() {
   const location = useLocation();
   const token = getAccessToken();
   const isAuthPage = location.pathname === "/login";
+  useTokenRefresh();
+
+  const { getVariations, preload } = useVariationsCache();
 
   /* =======================
      CATEGORIES
@@ -120,6 +143,9 @@ export default function App() {
   const [discountValue, setDiscountValue] = useState(0);
   const [discountType, setDiscountType] = useState("flat");
 
+  const [appliedCoupon, setAppliedCoupon] = useState(null);
+  const [isFetchingCoupon, setIsFetchingCoupon] = useState(false);
+
   const [orderType, setOrderType] = useState("Normal Sale");
   const [paymentMethod, setPaymentMethod] = useState(null);
 
@@ -152,11 +178,29 @@ export default function App() {
   );
 
   const discountAmount = useMemo(() => {
-    if (discountType === "percent") {
-      return Math.min(subtotal, (subtotal * discountValue) / 100);
+    let discount = 0;
+
+    // Coupon discount (highest priority)
+    if (appliedCoupon) {
+      const couponAmount = parseFloat(appliedCoupon.amount) || 0;
+      
+      if (appliedCoupon.discount_type === "percent") {
+        discount = (subtotal * couponAmount) / 100;
+      } else if (appliedCoupon.discount_type === "fixed_cart") {
+        discount = couponAmount;
+      } else if (appliedCoupon.discount_type === "fixed_product") {
+        discount = cart.length * couponAmount;
+      }
+    } 
+    // Manual discount (only if no coupon)
+    else if (discountType === "percent") {
+      discount = (subtotal * discountValue) / 100;
+    } else {
+      discount = discountValue;
     }
-    return Math.min(subtotal, discountValue);
-  }, [subtotal, discountValue, discountType]);
+
+    return Math.min(subtotal, discount);
+  }, [subtotal, appliedCoupon, discountValue, discountType, cart.length]);
 
   const chargesTotal =
     (alterationCharge || 0) + (courierCharge || 0) + (otherCharge || 0);
@@ -166,30 +210,32 @@ export default function App() {
   /* =======================
      CART ACTIONS
   ======================= */
-  function handleAddToCart(product, size) {
+  function handleAddToCart(product, variation) {
+    const remaining = getRemainingProductStock(cart, product);
+    
+    if (remaining < 1) {
+      toast.error("Out of stock - product limit reached");
+      return;
+    }
+
     setCart((prev) => {
       const idx = prev.findIndex(
-        (i) => i.product.id === product.id && i.size === size
+        (i) => i.product.id === product.id && 
+               (i.variation?.id || null) === (variation?.id || null)
       );
-      const available = getAvailableStock(product, size);
 
       if (idx > -1) {
-        if (prev[idx].qty + 1 > available) {
-          alert(`Only ${available} available`);
-          return prev;
-        }
+        // Item exists, increment quantity
         const copy = [...prev];
         copy[idx] = { ...copy[idx], qty: copy[idx].qty + 1 };
         return copy;
       }
 
-      if (available < 1) {
-        alert("Out of stock");
-        return prev;
-      }
-
-      return [...prev, { product, size, qty: 1 }];
+      // New item (different size)
+      return [...prev, { product, variation, qty: 1 }];
     });
+    
+    toast.success(`Added to cart`);
   }
 
   async function handleReprintOrder(wooOrderId) {
@@ -210,17 +256,118 @@ export default function App() {
       if (!item) return prev;
 
       const nextQty = item.qty + delta;
-      if (delta > 0 && nextQty > getAvailableStock(item.product, item.size)) {
-        alert("Stock limit reached");
-        return prev;
-      }
-
+      
+      // Handle removal
       if (nextQty <= 0) return prev.filter((_, i) => i !== index);
+
+      // Check PRODUCT-LEVEL stock limit when increasing
+      if (delta > 0) {
+        const totalStock = getProductTotalStock(item.product);
+        const totalInCart = getProductCartQuantity(prev, item.product.id);
+        
+        if (totalInCart >= totalStock) {
+          toast.error("Product stock limit reached");
+          return prev;
+        }
+      }
 
       const copy = [...prev];
       copy[index] = { ...item, qty: nextQty };
       return copy;
     });
+  }
+
+  /* =======================
+     PRODUCT SELECTION WITH CACHING
+     ✅ NEW OPTIMIZED HANDLERS
+  ======================= */
+  
+  /**
+   * Preload variations on hover
+   * This makes product opening feel instant
+   */
+  function handleProductHover(product) {
+    // Only preload if variable product (has sizes)
+    if (product.type === "variable") {
+      preload(product.id);
+    }
+  }
+
+  /**
+   * Open product modal with cached variations
+   * Modal opens immediately, variations load in background
+   */
+  async function handleProductClick(product) {
+    console.log(`🖱️ Product clicked: ${product.name} (ID: ${product.id})`);
+    
+    // ✅ STEP 1: Open modal immediately (optimistic UI)
+    setActiveProduct(product);
+    setProductModalOpen(true);
+
+    // ✅ STEP 2: If variable product, fetch/use cached variations
+    if (product.type === "variable") {
+      const variations = await getVariations(product.id);
+      
+      // ✅ STEP 3: Update product with variations and flag
+      setActiveProduct(prev => ({
+        ...prev,
+        variations,
+        variationsLoaded: true,
+      }));
+    }
+  }
+
+  async function handleApplyCoupon(couponId) {
+    if (!couponId) {
+      setAppliedCoupon(null);
+      return;
+    }
+
+    try {
+      setIsFetchingCoupon(true);
+      const response = await fetchCouponById(couponId);
+      
+      // ✅ FIX: Handle different response structures
+      const couponData = response.data?.data || response.data;
+      
+      console.log("📋 Coupon data received:", couponData); // Debug log
+
+      // Validate usage limit
+      if (couponData.usage_limit && couponData.usage_count >= couponData.usage_limit) {
+        toast.error("Coupon usage limit reached");
+        setAppliedCoupon(null);
+        return;
+      }
+
+      // Validate expiry
+      if (couponData.date_expires) {
+        const expiryDate = new Date(couponData.date_expires);
+        if (expiryDate < new Date()) {
+          toast.error("Coupon has expired");
+          setAppliedCoupon(null);
+          return;
+        }
+      }
+
+      // Validate minimum amount
+      if (couponData.minimum_amount && subtotal < parseFloat(couponData.minimum_amount)) {
+        toast.error(`Minimum order amount ₹${couponData.minimum_amount} required`);
+        setAppliedCoupon(null);
+        return;
+      }
+
+      setAppliedCoupon(couponData);
+      
+      // ✅ FIX: Better success message handling
+      const couponCode = couponData.code || "Coupon";
+      toast.success(`${couponCode} applied successfully`);
+    } catch (err) {
+      console.error("❌ Coupon error:", err); // Debug log
+      toast.error(err?.response?.data?.message || "Invalid coupon");
+      setAppliedCoupon(null);
+    } finally {
+      setIsFetchingCoupon(false);
+    }
   }
 
   /* =======================
@@ -232,6 +379,7 @@ export default function App() {
     setNotes("");
     setMeasurements(defaultMeasurements);
     setCouponCode("");
+    setAppliedCoupon(null);
     setAlterationCharge(0);
     setCourierCharge(0);
     setOtherCharge(0);
@@ -243,7 +391,7 @@ export default function App() {
     setReceiptOrder(null);
   }
 
-/* =======================
+  /* =======================
      CREATE ORDER (SERVER FIRST)
      ✅ UPDATED: Detects FMS components and shows verification message
   ======================= */
@@ -262,7 +410,7 @@ export default function App() {
           fms_components: i.product.fms_components || [],
         })),
         customer: currentCustomer || null,
-        couponCode,
+        couponCode: appliedCoupon?.code || couponCode,
         notes,
         measurements,
         orderType,
@@ -270,6 +418,11 @@ export default function App() {
           alteration: alterationCharge,
           courier: courierCharge,
           other: otherCharge,
+        },
+        discount: {
+          value: discountAmount,
+          type: appliedCoupon?.discount_type || discountType,
+          coupon_id: appliedCoupon?.id || null,
         },
         paymentMethod: method,
       };
@@ -298,7 +451,7 @@ export default function App() {
         toast.success(`Order #${orderRes.data.order_number} created`);
       }
       
-      // Open PrintOptionsModal
+      // ✅ Open PrintOptionsModal (stays open for multiple prints)
       setPrintOptionsOpen(true);
     } catch (err) {
       toast.error(err?.response?.data?.message || "Order failed");
@@ -328,10 +481,8 @@ export default function App() {
                     onCategoryChange={setSelectedCategory}
                     searchQuery={searchQuery}
                     onSearchChange={setSearchQuery}
-                    onProductClick={(p) => {
-                      setActiveProduct(p);
-                      setProductModalOpen(true);
-                    }}
+                    onProductClick={handleProductClick} 
+                    onProductHover={handleProductHover} 
                   />
 
                   <CartPanel
@@ -348,6 +499,9 @@ export default function App() {
                     onOpenCustomerModal={() => setCustomerModalOpen(true)}
                     customers={customers}
                     addCustomer={addCustomer}
+                    appliedCoupon={appliedCoupon}
+                    onApplyCoupon={handleApplyCoupon}
+                    isFetchingCoupon={isFetchingCoupon}
                     onRemoveItem={(i) =>
                       setCart((p) => p.filter((_, x) => x !== i))
                     }
@@ -389,13 +543,13 @@ export default function App() {
           />
 
           <Route
-     path="/reports"
-     element={
-       <ProtectedRoute>
-         <ReportsPage />
-       </ProtectedRoute>
-     }
-   />
+            path="/reports"
+            element={
+              <ProtectedRoute>
+                <ReportsPage />
+              </ProtectedRoute>
+            }
+          />
 
           <Route
             path="/customers"
@@ -416,10 +570,15 @@ export default function App() {
         product={activeProduct}
         selectedSize={selectedSize}
         setSelectedSize={setSelectedSize}
-        onClose={() => setProductModalOpen(false)}
-        onAddToCart={(size) => {
-          handleAddToCart(activeProduct, size);
+        cart={cart}
+        onClose={() => {
           setProductModalOpen(false);
+          setSelectedSize(null);
+        }}
+        onAddToCart={(item) => {
+          handleAddToCart(item.product, item.variation);
+          setProductModalOpen(false);
+          setSelectedSize(null);
         }}
       />
 
@@ -433,10 +592,13 @@ export default function App() {
         }}
       />
 
+      {/* ✅ UPDATED: Print Options Modal - stays open for multiple prints */}
       <PrintOptionsModal
         isOpen={printOptionsOpen}
         onClose={() => {
           setPrintOptionsOpen(false);
+          // ✅ Clear cart when print options modal closes
+          resetSaleToNew();
           // If we were in reprint flow, close details modal and reset
           if (isReprintFlow) {
             setSelectedOrderForDetails(null);
@@ -445,7 +607,7 @@ export default function App() {
         }}
         onSelectVariant={(v) => {
           setReceiptVariant(v);
-          setPrintOptionsOpen(false);
+          // ✅ Don't close PrintOptionsModal - just open receipt
           setReceiptModalOpen(true);
         }}
       />
@@ -460,16 +622,13 @@ export default function App() {
         }}
       />
 
+      {/* ✅ UPDATED: Receipt Modal - returns to print options instead of clearing */}
       <ReceiptModal
         isOpen={receiptModalOpen}
         onClose={() => {
           setReceiptModalOpen(false);
-          resetSaleToNew();
-          // If we were in reprint flow, close details modal and reset
-          if (isReprintFlow) {
-            setSelectedOrderForDetails(null);
-            setIsReprintFlow(false);
-          }
+          // ✅ Don't reset sale - user can print more copies
+          // Just return to print options modal
         }}
         order={receiptOrder}
         variant={receiptVariant}
@@ -488,8 +647,9 @@ export default function App() {
           }}
         />
       )}
+
       {/* FMS Debug Button - only visible in development */}
-    {/* <FmsDebugButton /> */}
+      {/* <FmsDebugButton /> */}
     </div>
   );
 }

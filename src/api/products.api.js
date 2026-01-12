@@ -1,48 +1,67 @@
+// src/api/products.api.js
 import api from "./axios";
+
+// ✅ Configure request timeouts
+const API_TIMEOUT = 5000; // 5 seconds max
+
+/**
+ * Fetch single product by ID
+ * ✅ With timeout to fail fast
+ */
+export function fetchProductById(id) {
+  console.log(`📡 API: fetchProductById(id=${id})`);
+  return api.get(`/products/${id}`, {
+    timeout: API_TIMEOUT,
+  });
+}
+
+/**
+ * Fetch product variations
+ * ✅ With timeout to fail fast
+ */
+export function fetchProductVariations(id) {
+  console.log(`📡 API: fetchProductVariations(id=${id})`);
+  return api.get(`/products/${id}/variations`, {
+    timeout: API_TIMEOUT,
+  });
+}
 
 /**
  * Fetch paginated products (normal catalog)
  */
 export function fetchProducts({ page = 1, limit = 20, category }) {
+  console.log(`📡 API: fetchProducts(page=${page}, limit=${limit}, category=${category || "all"})`);
   return api.get("/products", {
     params: { page, limit, category },
+    timeout: API_TIMEOUT,
   });
 }
 
 /**
- * 🔍 NEW: Search products across all pages
- * This will search the entire catalog, not just loaded products
+ * 🔍 Search products across all pages
  */
 export function searchProducts(query, category) {
+  console.log(`📡 API: searchProducts(query="${query}", category=${category || "all"})`);
   return api.get("/products", {
     params: {
-      search: query,
-      per_page: 100, // Get more results for search
+      search: query.trim(),
+      per_page: 100,
       category,
     },
+    timeout: API_TIMEOUT,
   });
 }
 
 /**
  * 🔍 Lookup product by SKU / barcode
- * Used by POS scanner
  */
 export function lookupBySku(code) {
+  console.log(`📡 API: lookupBySku(code="${code}")`);
   return api.get("/products", {
     params: {
-      sku: code,
-      limit: 5,
+      sku: code.trim(),
+      limit: 20,
     },
+    timeout: API_TIMEOUT,
   });
-}
-
-/**
- * Fetch single product by ID
- */
-export function fetchProductById(id) {
-  return api.get(`/products/${id}`);
-}
-
-export function fetchProductVariations(id) {
-  return api.get(`/products/${id}/variations`);
 }

@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from "react";
 import { Tag, Plus, ChevronDown, Loader2, X } from "lucide-react";
 import { fetchCoupons } from "../../api/coupons.api";
 import CreateCouponModal from "../modals/CreateCouponModal";
+import { toast } from "sonner";
 
 export default function VoucherAndNotes({
   notes,
@@ -11,6 +12,10 @@ export default function VoucherAndNotes({
   setMeasurements,
   couponCode,
   setCouponCode,
+  appliedCoupon, // ✅ NEW: Applied coupon object from parent
+  onApplyCoupon, // ✅ NEW: Handler to apply/validate coupon
+  isFetchingCoupon, // ✅ NEW: Loading state from parent
+  subtotal, // ✅ NEW: For minimum amount validation
 }) {
   const [showNotes, setShowNotes] = useState(false);
   const [showMeasurements, setShowMeasurements] = useState(false);
@@ -55,7 +60,20 @@ export default function VoucherAndNotes({
         : [];
       
       console.log("✅ Loaded coupons:", couponList.length);
-      setCoupons(couponList);
+      
+      // ✅ Filter only active coupons
+      const activeCoupons = couponList.filter(c => {
+        // Check expiry
+        if (c.date_expires) {
+          const expiryDate = new Date(c.date_expires);
+          if (expiryDate < new Date()) return false;
+        }
+        // Check usage limit
+        if (c.usage_limit && c.usage_count >= c.usage_limit) return false;
+        return true;
+      });
+      
+      setCoupons(activeCoupons);
     } catch (err) {
       console.error("❌ Failed to load coupons:", err);
       setCoupons([]);
@@ -69,17 +87,27 @@ export default function VoucherAndNotes({
     // Add to list
     setCoupons((prev) => [newCoupon, ...prev]);
     // Auto-apply the newly created coupon
+    onApplyCoupon(newCoupon.id);
     setCouponCode(newCoupon.code);
     setShowDropdown(false);
   };
 
+  // ✅ Updated: Use parent's onApplyCoupon handler
   const handleSelectCoupon = (coupon) => {
+    // Validate minimum amount before applying
+    if (coupon.minimum_amount && subtotal < parseFloat(coupon.minimum_amount)) {
+      toast.error(`Minimum order amount ₹${coupon.minimum_amount} required for this coupon`);
+      return;
+    }
+    
     setCouponCode(coupon.code);
+    onApplyCoupon(coupon.id); // ✅ Trigger parent's validation & application
     setShowDropdown(false);
   };
 
   const handleClearCoupon = () => {
     setCouponCode("");
+    onApplyCoupon(null); // ✅ Clear applied coupon in parent
     setShowDropdown(false);
   };
 
@@ -96,7 +124,8 @@ export default function VoucherAndNotes({
     return `${amount} discount`;
   };
 
-  const selectedCoupon = coupons.find((c) => c.code === couponCode);
+  // ✅ Use appliedCoupon from parent instead of finding by code
+  const selectedCoupon = appliedCoupon;
 
   return (
     <div className="p-4 border-t border-gray-200 bg-gray-50 space-y-3">
@@ -107,11 +136,17 @@ export default function VoucherAndNotes({
           <button
             type="button"
             onClick={() => setShowDropdown(!showDropdown)}
-            className="flex-1 flex items-center justify-between px-3 py-2 text-sm border border-gray-300 rounded bg-white hover:border-blue-400 transition focus:outline-none focus:ring-2 focus:ring-blue-200"
+            disabled={isFetchingCoupon}
+            className="flex-1 flex items-center justify-between px-3 py-2 text-sm border border-gray-300 rounded bg-white hover:border-blue-400 transition focus:outline-none focus:ring-2 focus:ring-blue-200 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <div className="flex items-center gap-2 flex-1 min-w-0">
               <Tag className="w-4 h-4 text-gray-400 flex-shrink-0" />
-              {loadingCoupons ? (
+              {isFetchingCoupon ? (
+                <span className="text-gray-400 flex items-center gap-2">
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                  Validating...
+                </span>
+              ) : loadingCoupons ? (
                 <span className="text-gray-400 flex items-center gap-2">
                   <Loader2 className="w-3 h-3 animate-spin" />
                   Loading coupons...
@@ -152,7 +187,7 @@ export default function VoucherAndNotes({
         {showDropdown && (
           <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-64 overflow-y-auto">
             {/* Clear Option */}
-            {couponCode && (
+            {selectedCoupon && (
               <>
                 <button
                   type="button"
@@ -171,54 +206,61 @@ export default function VoucherAndNotes({
                 No coupons available
               </div>
             ) : (
-              coupons.map((coupon) => (
-                <button
-                  key={coupon.id}
-                  type="button"
-                  onClick={() => handleSelectCoupon(coupon)}
-                  className={`w-full px-3 py-2.5 text-left hover:bg-blue-50 transition border-b border-gray-100 last:border-b-0 ${
-                    coupon.code === couponCode ? "bg-blue-50" : ""
-                  }`}
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex-1 min-w-0">
-                      <div className="font-semibold text-sm text-gray-900 truncate">
-                        {coupon.code}
+              coupons.map((coupon) => {
+                // Check if coupon meets minimum
+                const meetsMinimum = !coupon.minimum_amount || 
+                                    subtotal >= parseFloat(coupon.minimum_amount);
+                
+                return (
+                  <button
+                    key={coupon.id}
+                    type="button"
+                    onClick={() => handleSelectCoupon(coupon)}
+                    disabled={!meetsMinimum}
+                    className={`w-full px-3 py-2.5 text-left hover:bg-blue-50 transition border-b border-gray-100 last:border-b-0 ${
+                      selectedCoupon?.id === coupon.id ? "bg-blue-50" : ""
+                    } ${!meetsMinimum ? "opacity-50 cursor-not-allowed" : ""}`}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <div className="font-semibold text-sm text-gray-900 truncate">
+                          {coupon.code}
+                        </div>
+                        {coupon.description && (
+                          <div className="text-xs text-gray-500 mt-0.5 line-clamp-1">
+                            {coupon.description}
+                          </div>
+                        )}
+                        <div className="flex items-center gap-2 mt-1 text-xs">
+                          <span className="text-green-600 font-semibold">
+                            {getDiscountDisplay(coupon)}
+                          </span>
+                          {coupon.minimum_amount && (
+                            <span className={meetsMinimum ? "text-gray-400" : "text-red-500 font-medium"}>
+                              • Min: ₹{coupon.minimum_amount}
+                            </span>
+                          )}
+                        </div>
                       </div>
-                      {coupon.description && (
-                        <div className="text-xs text-gray-500 mt-0.5 line-clamp-1">
-                          {coupon.description}
+                      {selectedCoupon?.id === coupon.id && (
+                        <div className="flex-shrink-0 w-5 h-5 bg-blue-600 rounded-full flex items-center justify-center">
+                          <svg
+                            className="w-3 h-3 text-white"
+                            fill="none"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth="2"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                          >
+                            <path d="M5 13l4 4L19 7" />
+                          </svg>
                         </div>
                       )}
-                      <div className="flex items-center gap-2 mt-1 text-xs">
-                        <span className="text-green-600 font-semibold">
-                          {getDiscountDisplay(coupon)}
-                        </span>
-                        {coupon.minimum_amount && (
-                          <span className="text-gray-400">
-                            • Min: ₹{coupon.minimum_amount}
-                          </span>
-                        )}
-                      </div>
                     </div>
-                    {coupon.code === couponCode && (
-                      <div className="flex-shrink-0 w-5 h-5 bg-blue-600 rounded-full flex items-center justify-center">
-                        <svg
-                          className="w-3 h-3 text-white"
-                          fill="none"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth="2"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                        >
-                          <path d="M5 13l4 4L19 7" />
-                        </svg>
-                      </div>
-                    )}
-                  </div>
-                </button>
-              ))
+                  </button>
+                );
+              })
             )}
           </div>
         )}

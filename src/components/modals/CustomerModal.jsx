@@ -101,8 +101,9 @@ export default function CustomerModal({ isOpen, onClose, onSave, currentCustomer
       return;
     }
 
-    if (!formData.phone.trim()) {
-      alert("Phone is required!");
+    // At least one contact method (phone or email) should be provided
+    if (!formData.phone.trim() && !formData.email.trim()) {
+      alert("Please provide either phone number or email!");
       return;
     }
 
@@ -124,7 +125,7 @@ export default function CustomerModal({ isOpen, onClose, onSave, currentCustomer
         last_name: formData.last_name.trim() || "",
         email: formData.email.trim() || "",
         phone: formData.phone.trim(),
-        username: `customer_${formData.phone.trim()}_${Date.now()}`, // Unique username
+        username: `customer_${formData.phone.trim() || formData.email.trim().replace(/[@.]/g, '_')}_${Date.now()}`, // Unique username
         customer_type: formData.customer_type, // ✅ Send at root level for backend
         billing: {
           first_name: formData.first_name.trim(),
@@ -351,7 +352,7 @@ export default function CustomerModal({ isOpen, onClose, onSave, currentCustomer
             {/* Phone & Email */}
             <div className="grid grid-cols-2 gap-3 mb-3">
               <div>
-                <label className="block text-xs text-gray-600 mb-1">Phone *</label>
+                <label className="block text-xs text-gray-600 mb-1">Phone</label>
                 <input
                   type="tel"
                   name="phone"
@@ -362,7 +363,7 @@ export default function CustomerModal({ isOpen, onClose, onSave, currentCustomer
                 />
               </div>
               <div>
-                <label className="block text-xs text-gray-600 mb-1">Email</label>
+                <label className="block text-xs text-gray-600 mb-1">Email <span className="text-gray-400 text-xs">(or phone required)</span></label>
                 <input
                   type="email"
                   name="email"

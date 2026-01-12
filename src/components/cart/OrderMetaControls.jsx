@@ -17,6 +17,8 @@ export default function OrderMetaControls({
   setDiscountValue,
   discountType,
   setDiscountType,
+  appliedCoupon, // ✅ NEW: Applied coupon data
+  discountAmount, // ✅ NEW: Calculated discount amount
 }) {
   const handleNumberChange = (setter) => (e) => {
     const raw = e.target.value;
@@ -24,7 +26,6 @@ export default function OrderMetaControls({
     setter(Number.isFinite(parsed) ? parsed : 0);
   };
 
-  // ✅ FIX: Use correct order type values that match backend
   const handleOrderTypeChange = (type) => {
     setOrderType(type);
   };
@@ -127,30 +128,68 @@ export default function OrderMetaControls({
         </div>
       </div>
 
-      {/* Discount */}
+      {/* ✅ Discount Section - Updated to show coupon info */}
       <div>
-        <p className="font-semibold text-gray-700 mb-2 uppercase tracking-wide">
-          Discount
-        </p>
-        <div className="flex gap-2">
-          <input
-            type="number"
-            min="0"
-            step={discountType === "percent" ? "1" : "0.01"}
-            className="flex-1 border rounded px-2 py-1 text-xs"
-            placeholder="0"
-            value={formatNumberInputValue(discountValue)}
-            onChange={handleNumberChange(setDiscountValue)}
-          />
-          <select
-            className="border rounded px-2 py-1 text-xs"
-            value={discountType}
-            onChange={(e) => setDiscountType(e.target.value)}
-          >
-            <option value="flat">₹</option>
-            <option value="percent">%</option>
-          </select>
+        <div className="flex items-center justify-between mb-2">
+          <p className="font-semibold text-gray-700 uppercase tracking-wide">
+            Discount
+          </p>
+          {/* ✅ Show applied discount amount */}
+          {discountAmount > 0 && (
+            <span className="text-green-600 font-bold text-sm">
+              -₹{discountAmount.toLocaleString()}
+            </span>
+          )}
         </div>
+
+        {/* ✅ Show coupon info if applied */}
+        {appliedCoupon ? (
+          <div className="bg-green-50 border border-green-200 rounded-lg p-2.5 mb-2">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-semibold text-green-900">
+                  Coupon Applied: {appliedCoupon.code}
+                </p>
+                <p className="text-[11px] text-green-700 mt-0.5">
+                  {appliedCoupon.discount_type === "percent"
+                    ? `${appliedCoupon.amount}% discount`
+                    : `₹${appliedCoupon.amount} discount`}
+                </p>
+              </div>
+              <div className="text-xs font-bold text-green-700">
+                ₹{discountAmount.toLocaleString()}
+              </div>
+            </div>
+          </div>
+        ) : (
+          /* ✅ Manual discount input - only show when no coupon */
+          <div className="flex gap-2">
+            <input
+              type="number"
+              min="0"
+              step={discountType === "percent" ? "1" : "0.01"}
+              className="flex-1 border rounded px-2 py-1 text-xs"
+              placeholder="0"
+              value={formatNumberInputValue(discountValue)}
+              onChange={handleNumberChange(setDiscountValue)}
+            />
+            <select
+              className="border rounded px-2 py-1 text-xs"
+              value={discountType}
+              onChange={(e) => setDiscountType(e.target.value)}
+            >
+              <option value="flat">₹</option>
+              <option value="percent">%</option>
+            </select>
+          </div>
+        )}
+
+        {/* ✅ Info text */}
+        {appliedCoupon && (
+          <p className="text-[10px] text-gray-500 mt-1.5">
+            Remove the coupon above to apply manual discount
+          </p>
+        )}
       </div>
     </div>
   );

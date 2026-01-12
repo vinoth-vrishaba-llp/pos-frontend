@@ -24,10 +24,10 @@ export default function CartItem({ item, index, maxQty, onRemove, onChangeQty })
           </button>
         </div>
         <p className="text-xs text-gray-500 mb-1">
-          Size: {item.variation?.size || "Default"}
+          Size: {item.variation?.attributes?.Size || item.variation?.size || "Default"}
           {showMaxHint && (
             <span className="ml-1 text-[10px] text-gray-400">
-              (Max {maxQty})
+              (Max {maxQty} total)
             </span>
           )}
         </p>

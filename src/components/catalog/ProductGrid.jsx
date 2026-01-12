@@ -1,7 +1,7 @@
 // src/components/catalog/ProductGrid.jsx
 import ProductCard from "./ProductCard";
 
-export default function ProductGrid({ products, onProductClick }) {
+export default function ProductGrid({ products, onProductClick, onProductHover }) {
   // No internal loading/empty states - parent handles these
   
   return (
@@ -14,6 +14,7 @@ export default function ProductGrid({ products, onProductClick }) {
           key={p.id}
           product={p}
           onClick={() => onProductClick(p)}
+          onMouseEnter={() => onProductHover?.(p)}  
         />
       ))}
     </div>
