@@ -25,15 +25,6 @@ export function usePerformanceMonitor() {
         
         metricsRef.current.push(metric);
         
-        // Log if slow
-        if (duration > 1000) {
-          console.warn(`⚠️ SLOW: ${label} took ${duration}ms`);
-        } else if (duration > 500) {
-          console.log(`⏱️ ${label} took ${duration}ms`);
-        } else {
-          console.log(`⚡ ${label} took ${duration}ms`);
-        }
-        
         return parseFloat(duration);
       },
     };

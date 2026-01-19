@@ -20,40 +20,28 @@ export default function SearchBar({
     const value = searchQuery.trim();
     if (!value) return;
 
-    console.log(`\n⌨️ ENTER pressed with query: "${value}"`);
-
     try {
       // 🔍 Try SKU / barcode lookup first
-      console.log(`   → Attempting SKU lookup...`);
       const res = await lookupBySku(value);
       const results = res.data?.data || [];
 
-      console.log(`   → SKU lookup returned ${results.length} results`);
-
       if (results.length === 1) {
-        console.log(`   ✅ Single exact match found, opening product modal`);
         onProductFound(results[0]); // open modal
         onSearchChange(""); // clear after success
         return;
       } else if (results.length > 1) {
-        console.log(`   ℹ️ Multiple matches found (${results.length}), showing in grid`);
         // Multiple results - let the search display them in grid
         return;
-      } else {
-        console.log(`   ℹ️ No exact match, continuing with text search`);
       }
     } catch (err) {
       // ignore, fallback to normal search
-      console.warn("⚠️ SKU lookup failed, fallback to text search:", err.message);
     }
 
     // fallback: keep search text and let ProductCatalog handle it
-    console.log(`   → Continuing with text search for: "${value}"`);
   }
 
   function handleChange(e) {
     const value = e.target.value;
-    console.log(`🔤 Search input changed: "${value}"`);
     onSearchChange(value);
   }
 

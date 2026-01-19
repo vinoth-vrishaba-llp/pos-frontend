@@ -298,7 +298,6 @@ export default function App() {
    * Modal opens immediately, variations load in background
    */
   async function handleProductClick(product) {
-    console.log(`🖱️ Product clicked: ${product.name} (ID: ${product.id})`);
     
     // ✅ STEP 1: Open modal immediately (optimistic UI)
     setActiveProduct(product);
@@ -330,8 +329,6 @@ export default function App() {
       // ✅ FIX: Handle different response structures
       const couponData = response.data?.data || response.data;
       
-      console.log("📋 Coupon data received:", couponData); // Debug log
-
       // Validate usage limit
       if (couponData.usage_limit && couponData.usage_count >= couponData.usage_limit) {
         toast.error("Coupon usage limit reached");
@@ -442,11 +439,6 @@ export default function App() {
           `Order #${orderRes.data.order_number} created with ${res.data.woo.fms_items} FMS item(s)`,
           { duration: 5000 }
         );
-        console.log("🧵 FMS Components:", {
-          order_id: wooOrderId,
-          fms_items: res.data.woo.fms_items,
-          message: "Verify fabric reservation in WooCommerce admin",
-        });
       } else {
         toast.success(`Order #${orderRes.data.order_number} created`);
       }

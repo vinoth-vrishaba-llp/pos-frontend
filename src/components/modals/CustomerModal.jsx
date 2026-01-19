@@ -160,11 +160,7 @@ export default function CustomerModal({ isOpen, onClose, onSave, currentCustomer
         ]
       };
 
-      console.log("📤 Creating customer with payload:", payload);
-
       const created = await createCustomer(payload);
-
-      console.log("✅ Customer created:", created);
 
       // Transform and return
       const transformedCustomer = {

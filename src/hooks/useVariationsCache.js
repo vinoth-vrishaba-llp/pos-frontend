@@ -38,13 +38,10 @@ export function useVariationsCache() {
 
     // Check if cache is valid
     if (cached && (now - cached.timestamp) < CACHE_TTL) {
-      console.log(`✅ Cache HIT for product ${productId} (${cached.variations.length} variations)`);
       return cached.variations;
     }
 
     // Cache miss or expired - fetch from API
-    console.log(`📡 Cache MISS for product ${productId}, fetching...`);
-    
     try {
       const res = await fetchProductVariations(productId);
       const variations = res?.data || [];
@@ -55,10 +52,8 @@ export function useVariationsCache() {
         timestamp: now,
       });
 
-      console.log(`✅ Cached ${variations.length} variations for product ${productId}`);
       return variations;
     } catch (error) {
-      console.error(`❌ Failed to fetch variations for product ${productId}:`, error);
       return [];
     }
   }, []);
@@ -70,10 +65,8 @@ export function useVariationsCache() {
   const invalidate = useCallback((productId = null) => {
     if (productId) {
       cacheRef.current.delete(productId);
-      console.log(`🗑️ Cache invalidated for product ${productId}`);
     } else {
       cacheRef.current.clear();
-      console.log(`🗑️ Cache cleared (all products)`);
     }
   }, []);
 
@@ -93,7 +86,6 @@ export function useVariationsCache() {
     }
 
     // Preload in background
-    console.log(`🔄 Preloading variations for product ${productId}...`);
     await getVariations(productId);
   }, [getVariations]);
 

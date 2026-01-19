@@ -18,25 +18,13 @@ export default function ProgressiveImage({
   useEffect(() => {
     // Create image element to preload
     const img = new Image();
-    
-    // Start loading timer
-    const startTime = performance.now();
-    
+
     img.onload = () => {
-      const loadTime = (performance.now() - startTime).toFixed(0);
-      console.log(`🖼️ Image loaded in ${loadTime}ms`);
-      
-      if (loadTime > 2000) {
-        console.warn(`⚠️ Slow image load: ${loadTime}ms for ${src}`);
-      }
-      
       setImgSrc(src);
       setIsLoading(false);
     };
-    
+
     img.onerror = () => {
-      const loadTime = (performance.now() - startTime).toFixed(0);
-      console.error(`❌ Image failed to load after ${loadTime}ms: ${src}`);
       setHasError(true);
       setIsLoading(false);
     };

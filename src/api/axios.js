@@ -99,15 +99,11 @@ api.interceptors.response.use(
       isRefreshing = true;
 
       try {
-        console.log("🔄 Access token expired, attempting refresh...");
-        
         // Call refresh endpoint
         const res = await api.post("/auth/refresh");
         const newToken = res.data.accessToken;
-        
+
         if (newToken) {
-          console.log("✅ Token refreshed successfully");
-          
           // Save new token
           setAccessToken(newToken);
           

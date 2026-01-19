@@ -33,8 +33,6 @@ export default function ProductModal({
     if (!isOpen || !product?.id) return;
 
     const timer = startTimer(`Product ${product.id} load`);
-    const startTime = performance.now();
-    console.log(`🔍 ProductModal opened for product ${product.id}`);
 
     // ✅ STEP 1: Show modal immediately with grid data (no waiting!)
     setFullProduct(product); // Use product data from grid immediately
@@ -42,13 +40,9 @@ export default function ProductModal({
 
     // ✅ STEP 2: Check if variations are pre-loaded (from cache)
     if (product.variationsLoaded && product.variations) {
-      console.log(`✅ Using pre-loaded variations (${product.variations.length})`);
       setVariations(product.variations);
-      
-      const loadTime = (performance.now() - startTime).toFixed(0);
-      console.log(`⚡ Modal ready in ${loadTime}ms (cached)`);
       timer.end(); // ✅ End timer for cached case
-      
+
       // ✅ IMPORTANT: Return early - don't fetch again!
       return;
     }
@@ -72,37 +66,19 @@ export default function ProductModal({
         .then(vRes => {
           const loadedVariations = vRes?.data || [];
           setVariations(loadedVariations);
-          
-          const loadTime = (performance.now() - startTime).toFixed(0);
-          console.log(`⚡ Variations loaded in ${loadTime}ms (${loadedVariations.length} sizes)`);
-          
-          // Log warning if slow
-          if (loadTime > 1000) {
-            console.warn(`⚠️ Slow variations load: ${loadTime}ms for product ${product.id}`);
-          }
         })
         .catch(error => {
-          const loadTime = (performance.now() - startTime).toFixed(0);
-          console.error(`❌ Failed to load variations (${loadTime}ms):`, error.message);
-          
           // Continue with empty variations - user can still see product
           setVariations([]);
         })
         .finally(() => {
           setIsLoadingVariations(false);
-          
+
           // ✅ End performance timer
-          const totalLoadTime = timer.end();
-          
-          if (totalLoadTime > 3000) {
-            console.error(`🐌 VERY SLOW: Product ${product.id} took ${totalLoadTime}ms`);
-            // Optional: Send to analytics
-          }
+          timer.end();
         });
     } else {
       // Simple product (no variations)
-      const loadTime = (performance.now() - startTime).toFixed(0);
-      console.log(`⚡ Modal ready in ${loadTime}ms (simple product)`);
       timer.end(); // ✅ End timer for simple product
     }
   }, [isOpen, product?.id, product?.type, product?.variationsLoaded]); // ✅ Only depend on essential properties

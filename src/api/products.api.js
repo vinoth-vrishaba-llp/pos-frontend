@@ -9,7 +9,6 @@ const API_TIMEOUT = 5000; // 5 seconds max
  * ✅ With timeout to fail fast
  */
 export function fetchProductById(id) {
-  console.log(`📡 API: fetchProductById(id=${id})`);
   return api.get(`/products/${id}`, {
     timeout: API_TIMEOUT,
   });
@@ -20,7 +19,6 @@ export function fetchProductById(id) {
  * ✅ With timeout to fail fast
  */
 export function fetchProductVariations(id) {
-  console.log(`📡 API: fetchProductVariations(id=${id})`);
   return api.get(`/products/${id}/variations`, {
     timeout: API_TIMEOUT,
   });
@@ -30,7 +28,6 @@ export function fetchProductVariations(id) {
  * Fetch paginated products (normal catalog)
  */
 export function fetchProducts({ page = 1, limit = 20, category }) {
-  console.log(`📡 API: fetchProducts(page=${page}, limit=${limit}, category=${category || "all"})`);
   return api.get("/products", {
     params: { page, limit, category },
     timeout: API_TIMEOUT,
@@ -41,7 +38,6 @@ export function fetchProducts({ page = 1, limit = 20, category }) {
  * 🔍 Search products across all pages
  */
 export function searchProducts(query, category) {
-  console.log(`📡 API: searchProducts(query="${query}", category=${category || "all"})`);
   return api.get("/products", {
     params: {
       search: query.trim(),
@@ -56,7 +52,6 @@ export function searchProducts(query, category) {
  * 🔍 Lookup product by SKU / barcode
  */
 export function lookupBySku(code) {
-  console.log(`📡 API: lookupBySku(code="${code}")`);
   return api.get("/products", {
     params: {
       sku: code.trim(),

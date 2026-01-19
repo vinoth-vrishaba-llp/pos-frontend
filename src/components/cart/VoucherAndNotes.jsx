@@ -59,8 +59,6 @@ export default function VoucherAndNotes({
         ? res.data 
         : [];
       
-      console.log("✅ Loaded coupons:", couponList.length);
-      
       // ✅ Filter only active coupons
       const activeCoupons = couponList.filter(c => {
         // Check expiry
@@ -83,7 +81,6 @@ export default function VoucherAndNotes({
   };
 
   const handleCouponCreated = (newCoupon) => {
-    console.log("✅ New coupon created:", newCoupon);
     // Add to list
     setCoupons((prev) => [newCoupon, ...prev]);
     // Auto-apply the newly created coupon
