@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { login } from "@/api/auth.api";
 import { setAccessToken } from "@/utils/authStorage";
+import { sha256Hash } from "@/utils/crypto";
 
 export function useAuth() {
   const [loading, setLoading] = useState(false);
@@ -12,9 +13,10 @@ export function useAuth() {
       setLoading(true);
       setError(null);
 
+      const hashedPassword = await sha256Hash(password);
       const res = await login({
         username,
-        password,
+        password: hashedPassword,
       });
 
       setAccessToken(res.data.accessToken);
