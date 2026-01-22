@@ -1,10 +1,11 @@
 // src/utils/authStorage.js
+// Using localStorage for persistence across browser sessions (POS system)
 
 export const getAccessToken = () =>
-  sessionStorage.getItem("accessToken");
+  localStorage.getItem("accessToken");
 
 export const setAccessToken = (token) =>
-  sessionStorage.setItem("accessToken", token);
+  localStorage.setItem("accessToken", token);
 
 export const clearAuth = () =>
-  sessionStorage.removeItem("accessToken");
+  localStorage.removeItem("accessToken");

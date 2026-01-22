@@ -21,9 +21,7 @@ export default function ProductCard({ product, onClick }) {
           alt={product.name}
           className={`
             w-full h-full object-contain transition duration-500
-            ${outOfStock
-              ? "grayscale"
-              : "group-hover:scale-105"}
+            ${!outOfStock && "group-hover:scale-105"}
           `}
         />
 

@@ -2,7 +2,7 @@
 import { ShoppingBag } from "lucide-react";
 import CartItem from "./CartItem";
 
-export default function CartItems({ cart, onRemoveItem, onChangeQty }) {
+export default function CartItems({ cart, onRemoveItem, onChangeQty, onChangeSize }) {
   if (cart.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-full text-gray-400">
@@ -38,6 +38,7 @@ export default function CartItems({ cart, onRemoveItem, onChangeQty }) {
             totalInCart={totalInCart}
             onRemove={onRemoveItem}
             onChangeQty={onChangeQty}
+            onChangeSize={onChangeSize}
           />
         );
       })}

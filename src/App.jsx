@@ -161,6 +161,7 @@ export default function App() {
   const [activeProduct, setActiveProduct] = useState(null);
   const [selectedSize, setSelectedSize] = useState(null);
   const [receiptVariant, setReceiptVariant] = useState("customer");
+  const [changeSizeCartIndex, setChangeSizeCartIndex] = useState(null); // Track which cart item is being changed
 
   /* =======================
      SERVER ORDER (SOURCE OF TRUTH)
@@ -298,16 +299,44 @@ export default function App() {
    * Modal opens immediately, variations load in background
    */
   async function handleProductClick(product) {
-    
+
     // ✅ STEP 1: Open modal immediately (optimistic UI)
     setActiveProduct(product);
     setProductModalOpen(true);
+    setChangeSizeCartIndex(null); // Not changing size from cart
 
     // ✅ STEP 2: If variable product, fetch/use cached variations
     if (product.type === "variable") {
       const variations = await getVariations(product.id);
-      
+
       // ✅ STEP 3: Update product with variations and flag
+      setActiveProduct(prev => ({
+        ...prev,
+        variations,
+        variationsLoaded: true,
+      }));
+    }
+  }
+
+  /**
+   * Handle size change from cart
+   * Opens product modal for the cart item to select a new size
+   */
+  async function handleChangeSizeInCart(cartIndex) {
+    const cartItem = cart[cartIndex];
+    if (!cartItem) return;
+
+    const product = cartItem.product;
+
+    // Open modal with the product
+    setActiveProduct(product);
+    setChangeSizeCartIndex(cartIndex);
+    setSelectedSize(cartItem.variation); // Pre-select current size
+    setProductModalOpen(true);
+
+    // Fetch variations if variable product
+    if (product.type === "variable") {
+      const variations = await getVariations(product.id);
       setActiveProduct(prev => ({
         ...prev,
         variations,
@@ -498,6 +527,7 @@ export default function App() {
                       setCart((p) => p.filter((_, x) => x !== i))
                     }
                     onChangeQty={handleChangeQty}
+                    onChangeSize={handleChangeSizeInCart}
                     notes={notes}
                     setNotes={setNotes}
                     measurements={measurements}
@@ -563,14 +593,32 @@ export default function App() {
         selectedSize={selectedSize}
         setSelectedSize={setSelectedSize}
         cart={cart}
+        isChangingSize={changeSizeCartIndex !== null}
         onClose={() => {
           setProductModalOpen(false);
           setSelectedSize(null);
+          setChangeSizeCartIndex(null);
         }}
         onAddToCart={(item) => {
-          handleAddToCart(item.product, item.variation);
+          if (changeSizeCartIndex !== null) {
+            // Changing size of existing cart item
+            setCart(prev => {
+              const copy = [...prev];
+              const oldItem = copy[changeSizeCartIndex];
+              copy[changeSizeCartIndex] = {
+                ...oldItem,
+                variation: item.variation,
+              };
+              return copy;
+            });
+            toast.success("Size updated");
+          } else {
+            // Adding new item to cart
+            handleAddToCart(item.product, item.variation);
+          }
           setProductModalOpen(false);
           setSelectedSize(null);
+          setChangeSizeCartIndex(null);
         }}
       />
 

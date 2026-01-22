@@ -16,6 +16,7 @@ export default function ProductModal({
   cart,
   onClose,
   onAddToCart,
+  isChangingSize = false,
 }) {
   const [fullProduct, setFullProduct] = useState(null);
   const [variations, setVariations] = useState([]);
@@ -321,7 +322,7 @@ export default function ProductModal({
                 Loading sizes...
               </span>
             ) : canAddToCart() ? (
-              "Add to Bag"
+              isChangingSize ? "Update Size" : "Add to Bag"
             ) : (
               "Out of Stock"
             )}

@@ -1,9 +1,10 @@
 // src/components/cart/CartItem.jsx
-import { Trash2 } from "lucide-react";
+import { Trash2, RefreshCw } from "lucide-react";
 
-export default function CartItem({ item, index, maxQty, onRemove, onChangeQty }) {
+export default function CartItem({ item, index, maxQty, onRemove, onChangeQty, onChangeSize }) {
   const atMax = maxQty != null && item.qty >= maxQty;
   const showMaxHint = maxQty != null;
+  const isVariable = item.product.type === "variable";
 
   return (
     <div className="flex items-start gap-3 bg-white p-2 rounded-lg border border-gray-100 shadow-sm">
@@ -13,7 +14,13 @@ export default function CartItem({ item, index, maxQty, onRemove, onChangeQty })
       />
       <div className="flex-1 min-w-0">
         <div className="flex justify-between items-start">
-          <h5 className="text-sm font-medium text-gray-900 truncate pr-2">
+          <h5
+            className={`text-sm font-medium text-gray-900 truncate pr-2 ${
+              isVariable ? "cursor-pointer hover:text-blue-600 hover:underline" : ""
+            }`}
+            onClick={() => isVariable && onChangeSize?.(index)}
+            title={isVariable ? "Click to change size" : ""}
+          >
             {item.product.name}
           </h5>
           <button
@@ -23,8 +30,17 @@ export default function CartItem({ item, index, maxQty, onRemove, onChangeQty })
             <Trash2 className="w-4 h-4" />
           </button>
         </div>
-        <p className="text-xs text-gray-500 mb-1">
-          Size: {item.variation?.attributes?.Size || item.variation?.size || "Default"}
+        <p className="text-xs text-gray-500 mb-1 flex items-center gap-1">
+          <span>Size: {item.variation?.attributes?.Size || item.variation?.size || "Default"}</span>
+          {isVariable && (
+            <button
+              onClick={() => onChangeSize?.(index)}
+              className="text-blue-500 hover:text-blue-700"
+              title="Change size"
+            >
+              <RefreshCw className="w-3 h-3" />
+            </button>
+          )}
           {showMaxHint && (
             <span className="ml-1 text-[10px] text-gray-400">
               (Max {maxQty} total)

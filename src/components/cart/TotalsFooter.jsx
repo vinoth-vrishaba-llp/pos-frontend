@@ -1,5 +1,41 @@
 // src/components/cart/TotalsFooter.jsx
-import { Printer, BadgeCheck } from "lucide-react";
+import { Printer, BadgeCheck, AlertTriangle } from "lucide-react";
+import { useState } from "react";
+
+/* Confirmation Modal */
+function ConfirmationModal({ isOpen, onConfirm, onCancel }) {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm mx-4 p-6">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center">
+            <AlertTriangle className="w-5 h-5 text-amber-600" />
+          </div>
+          <h3 className="text-lg font-bold">Start New Sale?</h3>
+        </div>
+        <p className="text-gray-600 text-sm mb-6">
+          This will clear all items from the current cart. Are you sure you want to start a new sale?
+        </p>
+        <div className="flex gap-3">
+          <button
+            onClick={onCancel}
+            className="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg font-medium hover:bg-gray-50 transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onConfirm}
+            className="flex-1 px-4 py-2.5 bg-black text-white rounded-lg font-medium hover:bg-gray-800 transition-colors"
+          >
+            Yes, Start New
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function TotalsFooter({
   subtotal = 0,
@@ -12,12 +48,27 @@ export default function TotalsFooter({
   onResetSale,
   cartLength,
 }) {
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+
   const paymentLabel =
     paymentMethod === "cash"
       ? "Paid: Cash"
       : paymentMethod === "upi_card"
         ? "Paid: UPI / Card"
         : "Not marked as paid";
+
+  const handleStartNewSale = () => {
+    setShowConfirmModal(true);
+  };
+
+  const handleConfirmNewSale = () => {
+    setShowConfirmModal(false);
+    onResetSale();
+  };
+
+  const handleCancelNewSale = () => {
+    setShowConfirmModal(false);
+  };
 
   return (
     <div className="p-4 border-t border-gray-200 bg-white shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] space-y-3">
@@ -65,12 +116,19 @@ export default function TotalsFooter({
 
        {/* Start New Sale – full-width, below actions */}
       <button
-        onClick={onResetSale}
+        onClick={handleStartNewSale}
         disabled={cartLength === 0}
         className="w-full bg-gray-200 hover:bg-gray-300 text-gray-900 py-2.5 rounded-lg font-semibold transition text-sm disabled:opacity-50 disabled:cursor-not-allowed"
       >
         Start New Sale
       </button>
+
+      {/* Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={showConfirmModal}
+        onConfirm={handleConfirmNewSale}
+        onCancel={handleCancelNewSale}
+      />
     </div>
   );
 }

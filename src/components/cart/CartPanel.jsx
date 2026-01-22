@@ -19,6 +19,7 @@ export default function CartPanel({
   onOpenCustomerModal,
   onRemoveItem,
   onChangeQty,
+  onChangeSize,
   notes,
   setNotes,
   measurements,
@@ -54,6 +55,7 @@ export default function CartPanel({
           cart={cart}
           onRemoveItem={onRemoveItem}
           onChangeQty={onChangeQty}
+          onChangeSize={onChangeSize}
         />
 
         {/* Voucher + Notes/Measurements */}

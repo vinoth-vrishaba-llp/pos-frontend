@@ -11,8 +11,11 @@ import {
   AlertCircle,
   Tag,
   Home,
+  ShoppingBag,
+  Package,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { fetchCustomerOrders } from "@/api/customers.api";
 
 const CUSTOMER_TYPES = [
   "Walk-in customer",
@@ -45,6 +48,8 @@ export default function CustomerDetailsModal({
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [toast, setToast] = useState(null);
+  const [orders, setOrders] = useState([]);
+  const [loadingOrders, setLoadingOrders] = useState(false);
 
   const [formData, setFormData] = useState({
     name: customer?.name || "",
@@ -58,6 +63,24 @@ export default function CustomerDetailsModal({
     country: customer?.country || "IN",
     customer_type: customer?.customer_type || "Walk-in customer",
   });
+
+  // Fetch customer orders
+  useEffect(() => {
+    if (customer?.id) {
+      setLoadingOrders(true);
+      fetchCustomerOrders(customer.id)
+        .then((data) => {
+          setOrders(data.orders || data || []);
+        })
+        .catch((err) => {
+          console.error("Failed to fetch customer orders:", err);
+          setOrders([]);
+        })
+        .finally(() => {
+          setLoadingOrders(false);
+        });
+    }
+  }, [customer?.id]);
 
   if (!customer) return null;
 
@@ -360,7 +383,7 @@ export default function CustomerDetailsModal({
                 </select>
               ) : (
                 <div className="text-gray-800">
-                  {customer.country === "IN" ? "India" : 
+                  {customer.country === "IN" ? "India" :
                    customer.country === "US" ? "United States" :
                    customer.country === "GB" ? "United Kingdom" :
                    customer.country === "AU" ? "Australia" :
@@ -369,6 +392,84 @@ export default function CustomerDetailsModal({
                 </div>
               )}
             </div>
+          </div>
+
+          {/* Customer Orders Section */}
+          <div className="border-t pt-6">
+            <h3 className="text-sm font-semibold text-gray-700 uppercase mb-4 flex items-center gap-2">
+              <ShoppingBag className="w-4 h-4" />
+              Purchase History
+            </h3>
+
+            {loadingOrders ? (
+              <div className="flex items-center justify-center py-8 text-gray-400">
+                <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                Loading orders...
+              </div>
+            ) : orders.length === 0 ? (
+              <div className="text-center py-8 text-gray-400">
+                <Package className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                <p>No orders found</p>
+              </div>
+            ) : (
+              <div className="space-y-3 max-h-64 overflow-y-auto">
+                {orders.map((order) => (
+                  <div
+                    key={order.woo_order_id || order.id}
+                    className="border rounded-lg p-3 hover:bg-gray-50 transition-colors"
+                  >
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <div className="font-medium text-sm">
+                          Order #{order.order_number || order.woo_order_id || order.id}
+                        </div>
+                        <div className="text-xs text-gray-500 mt-1">
+                          {order.created_at
+                            ? new Date(order.created_at).toLocaleDateString("en-IN", {
+                                day: "numeric",
+                                month: "short",
+                                year: "numeric",
+                              })
+                            : "-"}
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="font-bold text-sm">
+                          {order.total}
+                        </div>
+                        <span
+                          className={`inline-block text-xs px-2 py-0.5 rounded-full mt-1 ${
+                            order.status === "completed"
+                              ? "bg-green-100 text-green-700"
+                              : order.status === "processing"
+                              ? "bg-blue-100 text-blue-700"
+                              : order.status === "refunded"
+                              ? "bg-red-100 text-red-700"
+                              : "bg-gray-100 text-gray-700"
+                          }`}
+                        >
+                          {order.status || "pending"}
+                        </span>
+                      </div>
+                    </div>
+                    {order.line_items && order.line_items.length > 0 && (
+                      <div className="mt-2 text-xs text-gray-500 border-t pt-2">
+                        {order.line_items.slice(0, 3).map((item, idx) => (
+                          <div key={idx} className="truncate">
+                            {item.quantity}x {item.name}
+                          </div>
+                        ))}
+                        {order.line_items.length > 3 && (
+                          <div className="text-gray-400">
+                            +{order.line_items.length - 3} more items
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>

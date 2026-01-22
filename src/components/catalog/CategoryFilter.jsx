@@ -1,4 +1,13 @@
 // src/components/catalog/CategoryFilter.jsx
+
+// Decode HTML entities (e.g., &amp; -> &)
+function decodeHtmlEntities(text) {
+  if (!text) return text;
+  const textarea = document.createElement("textarea");
+  textarea.innerHTML = text;
+  return textarea.value;
+}
+
 export default function CategoryFilter({
   categories = [],
   selectedCategory,
@@ -60,7 +69,7 @@ export default function CategoryFilter({
                   : "bg-white text-gray-700 border-gray-300 hover:border-black hover:text-black"}
               `}
             >
-              {c.name}
+              {decodeHtmlEntities(c.name)}
             </button>
           );
         })}

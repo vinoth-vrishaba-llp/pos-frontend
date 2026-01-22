@@ -4,6 +4,14 @@ import SearchBar from "./SearchBar";
 import CategoryFilter from "./CategoryFilter";
 import ProductGrid from "./ProductGrid";
 
+// Decode HTML entities (e.g., &amp; -> &)
+function decodeHtmlEntities(text) {
+  if (!text) return text;
+  const textarea = document.createElement("textarea");
+  textarea.innerHTML = text;
+  return textarea.value;
+}
+
 export default function ProductCatalog({
   categories,
   categoriesLoading,
@@ -242,7 +250,7 @@ export default function ProductCatalog({
             </span>
 
             <span className="flex items-center gap-2 px-3 py-1 text-xs bg-gray-100 border rounded-full">
-              {selectedCategory.name}
+              {decodeHtmlEntities(selectedCategory.name)}
               <button
                 onClick={() =>
                   onCategoryChange({
